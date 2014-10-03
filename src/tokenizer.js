@@ -5,7 +5,7 @@
  */
 
 var setDigit = function(word) {
-  return !isNaN(parseFloat(word)) ?
+  return ((!isNaN(parseFloat(word))) && (0 === word.search(/^[0-9\.]+$/))) ?
     {lex: 'digit', value: parseFloat(word)} : null;
 }
 
@@ -17,13 +17,13 @@ var setVariable = function(word) {
 }
 
 var setKeyWord = function(word) {
-  return 0 === word.search(/^(if|lambda|define|quote|let')$/) ?
+  return 0 === word.search(/^(if|lambda|define|quote)$/) ?
     {lex: 'keyword', value: word, error:false} : null;
 }
 
 var setOperator = function(word) {
   //Word must be <= >= * + - / > < =
-  return 0 === word.search(/(^[\<\>]\=$|^[\*\/\+\-\>\<\=]$)/) ?
+  return 0 === word.search(/(^[\<\>]\=$|^[\*\/\+\-\>\<\=\|\&\!]$)/) ?
     {lex: 'operator', value: word, error:false} : null;
 }
 
@@ -36,7 +36,11 @@ var tokenize = function(input) {
   
   var errors = [];
   var lexError = function(word) {
-    errors.push("Illegal character or word: " + word);
+    if (word === ''){
+      errors.push("Cannot have empty string.");
+    } else {
+      errors.push("Illegal character or word: " + word);
+    }
   }
 
   tokens = input.replace(/\(/g, ' ( ') //Replace all instances of '(' with ' ( '
@@ -48,7 +52,10 @@ var tokenize = function(input) {
                     || setVariable(word) || setBracket(word) || lexError(word);
                 });
 
-  return {errors: errors, tokens: tokens};
+  return {
+    errors: errors, 
+    tokens: (errors.length > 0 ? null : tokens)
+  };
 };
 
 exports.tokenize = tokenize;

@@ -5,17 +5,19 @@
 
 var bracketLinter = function(input) {
 
-  if ( false ==  /^\((.|\n)*(\)|\s|\n)$/.test(input) ) { //Must being/end in bracket
-    var error = "Input must begin with opening parenthesis and end with closing parenthesis.";
-    return {value: false, error: error};
-  }
+  var parenthesis = input.replace(/[^\(\)]/g, '')
+                         .split('');
 
-  var diff = (input.match( /\(/g ) || '').length - (input.match( /\)/g ) || '').length;
-  if(diff) {
-    var error = Math.abs(diff) + " too many " + (diff < 0 ? "closing" : "opening" ) + " parenthesis."
-    return {value: false, error: error};
+  var count = 0;
+  for ( it in parenthesis ) {
+    if (count < 0){
+      return {value:false, error:"Malformed parenthesis"};
+    }
+    count += (parenthesis[it] === ')' ? -1 : 1);
   }
-
+  if (count != 0){
+    return {value:false, error:"Malformed parenthesis"};
+  }
   return {value: true, error: null};
 }
 
