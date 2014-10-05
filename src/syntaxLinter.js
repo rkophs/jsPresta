@@ -14,15 +14,65 @@ setSuccess = function(tree, success, syntax, noChange){
 }
 
 /*
- * <syntax-binding> ->  ( <variable> <expression> )
+ * <datum> ->  <variable>
+ *           | <digit>
+ *           | <list>
  */
-var isSyntaxBinding = function(tree) {
+var isDatum = function(atom) {
+  return setSuccess(atom, (
+       isVariable(atom) 
+    || isDigit(atom)
+    || isList(atom)
+  ), "datum", true)
+};
+
+/*
+ * <keyword> -> string matching: if|lambda|define|quote|let
+ */
+var isKeyword = function(atom) {
+  return setSuccess(atom, (
+       (false == atom.value instanceof Array)
+    && atom.lex === 'keyword'
+  ), "keyword")
+};
+
+var isSpecificKeyword = function(tree, word){
+  return (//setSuccess(tree, (
+       isKeyword(tree)
+    && tree.value === word
+  )//, 'keyword');
+}
+
+/*
+ * <Operator> -> character matching: +|-|/|*|=|<|>|<=|>=
+ */
+var isOperator = function(atom) {
+  return setSuccess(atom, (
+       (false == atom.value instanceof Array)
+    && atom.lex === 'operator'
+  ), "operator")
+};
+
+/*
+ * <list> -> ( <datum>* )
+ */
+var isList = function(tree) {
   return setSuccess(tree, (
        (tree.value instanceof Array)
-    && (tree.value.length == 2)
-    && isVariable(tree.value[0])
-    && isExpression(tree.value[1])
-  ), "syntax-binding")
+    && tree.value.reduce(function(accum, elem){
+              return isDatum(elem) && accum;
+           }, true)
+  ), "list")
+};
+
+/*
+ * <digit> -> parsable floating point number
+ */
+var isDigit = function(atom) {
+  return setSuccess(atom, (
+       ( false == (atom.value instanceof Array) )
+    && ( atom.lex === 'digit' )
+  ), "digit")
 };
 
 /*
@@ -39,78 +89,14 @@ var isApplication = function(tree) {
 };
 
 /*
- * <variable> -> string matching: /^[A-Za-z]\w*$/
- */
-var isVariable = function(atom) {
-  return setSuccess(atom, (
-       (false == atom instanceof Array)
-    && atom.lex === 'variable'
-  ), "variable")
-};
-
-/*
- * <keyword> -> string matching: if|lamda|define|quote|let
- */
-var isKeyword = function(atom) {
-  return setSuccess(atom, (
-       (false == tree.value instanceof Array)
-    && tree.lex === 'keyword'
-  ), "keyword")
-};
-
-/*
- * <Operator> -> character matching: +|-|/|*|=|<|>|<=|>=
- */
-var isOperator = function(atom) {
-  return setSuccess(atom, (
-       (false == atom.value instanceof Array)
-    && atom.lex === 'operator'
-  ), "operator")
-};
-
-/*
- * <digit> -> parsable floating point number
- */
-var isDigit = function(atom) {
-  return setSuccess(atom, (
-       ( false == (atom.value instanceof Array) )
-    && ( atom.lex === 'digit' )
-  ), "digit")
-};
-
-/*
- * <list> -> ( <datum>* )
- */
-var isList = function(tree) {
-  return setSuccess(atom, (
-       (tree instanceof Array)
-    && tree.reduce(function(accum, elem){
-              return isDatum(elem) && accum;
-           }, true)
-  ), "list")
-}
-
-/*
- * <datum> ->  <variable>
- *           | <digit>
- *           | <list>
- */
-var isDatum = function(atom) {
-  return setSuccess(atom, (
-       isVariable(atom) 
-    || isDigit(atom)
-    || isList(atom)
-  ), "datum", true)
-};
-
-/*
- * <formals> -> ( <variables>* )
+ * <formals> -> ( <variables>+ )
  */
 var isFormals = function(tree) {
   return setSuccess(tree, (
        (tree.value instanceof Array)
+    && (tree.value.length >= 1)
     && tree.value.reduce(function(accum, elem){
-              return accum && isVariable(elem);
+              return isVariable(elem) && accum;
            },true)
   ), "formals")
 };
@@ -121,18 +107,18 @@ var isFormals = function(tree) {
  *                | ( quote <datum> )
  *                | ( lambda <formals> <body> )
  *                | ( if <expression> <expression> <expression> ) 
- *                | ( if <expression> <expression> ) 
- *                | ( <operator> <expression>* )
+ *                | ( <operator> <expression>+ )
  *                | <application>
  *                | ( let ( <syntax-binding>* ) <expression>+ )
  */
-var isExpression = function(tree) {
+var isExpression = function(inputTree) {
+
   var isIfExpression = function(tree) {
     return setSuccess(tree, (
          (tree.value instanceof Array)
-      && (tree.value.length == 3 || tree.value.length == 4)
+      && (tree.value.length == 4)
       && ( false == tree.value[0].value instanceof Array )
-      && tree.value[0].value === 'if'
+      && isSpecificKeyword(tree.value[0], 'if')
       && tree.value.slice(1)
                    .reduce(function(accum, elem){
                       return accum && isExpression(elem);
@@ -142,17 +128,17 @@ var isExpression = function(tree) {
   var isLambdaExpression = function(tree) {
     return setSuccess(tree, (
          (tree.value instanceof Array)
-      && tree.value.length == 3
-      && ( false == tree.value[0] instanceof Array )
-      && tree.value[0].value === 'lambda'
+      && tree.value.length >= 3
+      && tree.value[0].value == 'lambda'
+      && isSpecificKeyword(tree.value[0], 'lambda')
       && isFormals(tree.value[1])
-      && isBody(tree.value[2])
+      && isBody(tree.value.slice(2))
     ), "expression")
   };
   var isOpExpression = function(tree) {
     return setSuccess(tree, (
          (tree.value instanceof Array)
-      && (tree.value.length == 2 || tree.value.length == 3)
+      && (tree.value.length >= 2)
       && isOperator(tree.value[0])
       && tree.value.slice(1)
                    .reduce(function(accum, elem){
@@ -165,33 +151,51 @@ var isExpression = function(tree) {
          (tree.value instanceof Array)
       && tree.value.length == 2
       && ( false == tree.value[0] instanceof Array )
-      && tree.value[0].value === 'quote'
+      && isSpecificKeyword(tree.value[0], 'quote')
       && isDatum(tree.value[1])
     ), "expression")
   }
 
-  return setSuccess(tree, (
-       isDigit(tree)
-    || isVariable(tree)
-    || isListExpression(tree)
-    || isLambdaExpression(tree)
-    || isIfExpression(tree)
-    || isOpExpression(tree)
-    || isApplication(tree)
+  return setSuccess(inputTree, (
+       isDigit(inputTree)
+    || isVariable(inputTree)
+    || isListExpression(inputTree)
+    || isIfExpression(inputTree)
+    || isOpExpression(inputTree)
+    || isApplication(inputTree)
+    || isLambdaExpression(inputTree)
   ), "expression", true)
 };
 
+/*
+ * <variable> -> string matching: /^[A-Za-z]\w*$/
+ */
+var isVariable = function(atom) {
+  return setSuccess(atom, (
+       (false == atom instanceof Array)
+    && atom.lex === 'variable'
+  ), "variable")
+};
+
+/*
+ * <body> -> <definition>* <expression>
+ */
 var isBody = function(tree){
   isValidOrder = function(input){
-    bits = input.reduce(function(accum, elem){
-                  return accum.push(isDefinition(elem) ? 0 : (isExpression(elem) ? 1 : 2));
+    var bits = input.reduce(function(accum, elem){
+                  accum.push(isDefinition(elem) ? 0 : (isExpression(elem) ? 1 : 2));
+                  return accum;
                 }, []);
-    return (
-         bits.reduce(function(accum, elem){
-            return (elem < 2) && (elem >= arr[it - 1]);
-         })
-      && bits[bits.length - 1] === 1;
-    )
+    if(bits[bits.length - 1] != 1){
+      return false;
+    }
+
+    for(bitIt in bits.slice(0, bits.length - 1)){
+      if(bits[bitIt] != 0 ){
+        return false;
+      } 
+    }
+    return true;
   };
   
   return setSuccess(tree, (
@@ -210,10 +214,8 @@ var isVariableDefinition = function(tree) {
        (tree.value instanceof Array)
     && tree.value.length == 3 
     && tree.value[0].value === 'define'
-    && (
-            isVariable(tree.value[1]) 
-         && isExpression(tree.value[2])
-       )
+    && isVariable(tree.value[1]) 
+    && isExpression(tree.value[2])
   ), "variable-definition")
 };
 
@@ -221,7 +223,6 @@ var isVariableDefinition = function(tree) {
  * <definition> ->  <variable-definition>
  */
 var isDefinition = function(tree) {
-
   return setSuccess(tree, (
        isVariableDefinition(tree) 
   ), "definition", true)
@@ -245,24 +246,14 @@ var isProgram = function(tree) {
   return setSuccess(tree, (
        ( tree.value instanceof Array )
     && tree.value.reduce(function(accum, elem) {
-              return accum && isForm(elem);
+              return isForm(elem) && accum;
            }, true)
   ), "program")
 };
 
 var syntaxLinter = function(parseTree) {
-  return {
-    value: isProgram(parseTree, 1),
-    error: null
-  }
+  return isProgram(parseTree, 1);
 };
-
-var constructSymbolTable = function(concreteTree) {
-  var table 
-  var helper(tree, context){
-
-  }
-}
 
 exports.lint = syntaxLinter;
 
