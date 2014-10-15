@@ -6,81 +6,66 @@ var parser = require('../src/parser');
 var linter = require('../src/syntaxLinter');
 
 describe('syntaxLinter', function(){
-  describe("#lint() list and datums", function(){
-    it('empty list valid', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote () )').tokens);
+  describe("#lint() list no params", function(){
+    it('empty list param', function(){
+      var tree = parser.parse(tokenizer.tokenize('( f [] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
-      assert.equal(tree.syntax, 'program');
-      assert.equal(tree.value[0].syntax, 'expression');
-      assert.equal(tree.value[0].value[0].syntax, 'keyword');
-      assert.equal(tree.value[0].value[1].syntax, 'list');
     });
 
     it('full list valid', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote (10 f ) )').tokens);
-      var ret = linter.lint(tree);
-      assert.equal(ret, true);
-      assert.equal(tree.syntax, 'program');
-      assert.equal(tree.value.length, 1);
-      assert.equal(tree.value[0].syntax, 'expression');
-      assert.equal(tree.value[0].value.length, 2);
-      assert.equal(tree.value[0].value[0].syntax, 'keyword');
-      assert.equal(tree.value[0].value[1].syntax, 'list');
-      assert.equal(tree.value[0].value[1].value.length, 2);
-      assert.equal(tree.value[0].value[1].value[0].value, 10 );
-      assert.equal(tree.value[0].value[1].value[0].syntax, 'digit' );
-      assert.equal(tree.value[0].value[1].value[1].value, 'f' );
-      assert.equal(tree.value[0].value[1].value[1].syntax, 'variable' );
-    });
-
-    it('single list', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote 10 )').tokens);
-      var ret = linter.lint(tree);
-      assert.equal(ret, true);
-      assert.equal(tree.syntax, 'program');
-      assert.equal(tree.value.length, 1);
-      assert.equal(tree.value[0].syntax, 'expression');
-      assert.equal(tree.value[0].value.length, 2);
-      assert.equal(tree.value[0].value[0].syntax, 'keyword');
-      assert.equal(tree.value[0].value[1].syntax, 'digit');
-      assert.equal(tree.value[0].value[1].value, 10);
-    });
-
-    it('nested lists valid (lists, digits and vars)', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote ( x 30 ( y 50 ) ))').tokens);
+      var tree = parser.parse(tokenizer.tokenize('( f [ 10 10 ] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
     });
 
-    it('quote no list', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote )').tokens);
+    it('single list valid', function(){
+      var tree = parser.parse(tokenizer.tokenize('( f [10] )').tokens);
       var ret = linter.lint(tree);
-      assert.equal(ret, false);
+      assert.equal(ret, true);
+    });
+
+    it('lamda inside list is valid', function(){
+      var tree = parser.parse(tokenizer.tokenize('(f [ 10 f ( lambda (y)( + 10 y )) ] )').tokens);
+      var ret = linter.lint(tree);
+      assert.equal(ret, true);
+
+    });
+
+    it('nested lists valid ', function(){
+      var tree = parser.parse(tokenizer.tokenize('( f [ x 30 [ y 50 ] ] )').tokens);
+      var ret = linter.lint(tree);
+      assert.equal(ret, true);
+    });
+
+    it('nested lists valid with valid application (lists, digits and vars)', function(){
+      var tree = parser.parse(tokenizer.tokenize('( f [ x 30 ( b 50 ) ])').tokens);
+      var ret = linter.lint(tree);
+      assert.equal(ret, true);
     });
 
     it('full list invalid', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote ( (define x 10) 20 30 ))').tokens);
+      var tree = parser.parse(tokenizer.tokenize('( f [ (define x 10) 20 30 ] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, false);
     });
 
-    it('nested list invalid', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote ( 20 30 (quote (10 30))))').tokens);
+    it('nested list valid', function(){
+      var tree = parser.parse(tokenizer.tokenize('( f [ 20 30 [ 10 30 ]] )').tokens);
       var ret = linter.lint(tree);
-      assert.equal(ret, false);
+      assert.equal(ret, true);
     });
 
-    it('list with op invalid', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote ( + 20 30 ))').tokens);
+    it('list with op valid', function(){
+      var tree = parser.parse(tokenizer.tokenize('( f [ ( + 20 30 ) ])').tokens);
       var ret = linter.lint(tree);
-      assert.equal(ret, false);
+      assert.equal(ret, true);
     })
 
     it('list invalid token count', function(){
-      var tree = parser.parse(tokenizer.tokenize('( quote ( + 20 30 ) 20 )').tokens);
+      var tree = parser.parse(tokenizer.tokenize('(f [ ( + 20 30 ) 20  ])').tokens);
       var ret = linter.lint(tree);
-      assert.equal(ret, false);
+      assert.equal(ret, true);
     })
 
   });
@@ -99,7 +84,7 @@ describe('syntaxLinter', function(){
     });
 
     it('define to valid list', function(){
-      var tree = parser.parse(tokenizer.tokenize('( define x (quote (y z) )').tokens);
+      var tree = parser.parse(tokenizer.tokenize('( define x [y z] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
     });
@@ -107,8 +92,8 @@ describe('syntaxLinter', function(){
     it('define to valid lambdas', function(){
       var tree1 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) (+ y 20)) )').tokens);
       var tree2 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) (define z 10) (+ y z)) )').tokens);
-      var tree3 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) ((+ y z)) ))').tokens); //Syntax correct, sematic incorrect
-      var tree4 = parser.parse(tokenizer.tokenize('( define plus (lambda (q z) ((+ q z)) ))').tokens); //Syntax correct, sematic incorrect
+      var tree3 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) (+ y z) ))').tokens);
+      var tree4 = parser.parse(tokenizer.tokenize('( define plus (lambda (q z) (+ q z)))').tokens); //Syntax correct, sematic incorrect
       var ret1 = linter.lint(tree1);
       var ret2 = linter.lint(tree2);
       var ret3 = linter.lint(tree3);
@@ -129,6 +114,7 @@ describe('syntaxLinter', function(){
       var tree6 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) (define z 10) (+ y z) (- 20 10) ))').tokens);
       var tree7 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) (+ y z) (define z 10) (- 20 10) ))').tokens);
       var tree8 = parser.parse(tokenizer.tokenize('( define plus (lambda () ((+ 10 20)) ))').tokens); //pure means no need for this fn
+      var tree9 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) ((+ y z)) ))').tokens);
 
       var ret1 = linter.lint(tree1);
       var ret2 = linter.lint(tree2);
@@ -137,7 +123,8 @@ describe('syntaxLinter', function(){
       var ret5 = linter.lint(tree5);
       var ret6 = linter.lint(tree6);
       var ret7 = linter.lint(tree7);
-      var ret8 = linter.lint(tree7);
+      var ret8 = linter.lint(tree8);
+      var ret9 = linter.lint(tree9);
       
       assert.equal(ret1, false);
       assert.equal(ret2, false);
@@ -147,6 +134,7 @@ describe('syntaxLinter', function(){
       assert.equal(ret6, false);
       assert.equal(ret7, false);
       assert.equal(ret8, false);
+      assert.equal(ret9, false);
     });
 
     it('define to invalid lambda again', function(){
@@ -155,10 +143,10 @@ describe('syntaxLinter', function(){
       assert.equal(ret, false);
     });
 
-    it('define to valid digit, semantically incorrect', function(){
+    it('define to incorrect scope', function(){
       var tree = parser.parse(tokenizer.tokenize('( define x (10) )').tokens);
       var ret = linter.lint(tree);
-      assert.equal(ret, true);
+      assert.equal(ret, false);
     });
 
     it('define invalid variable name', function(){
@@ -236,12 +224,26 @@ describe('syntaxLinter', function(){
     });
   });
 
-  describe('#lint() application', function(){
+  describe('#lint() applications and programs', function(){
     it('valid application', function(){
-      var tree = parser.parse(tokenizer.tokenize('( define plus (lambda (y) (+ y 20)) ) (plus 20)').tokens);
-      var ret = linter.lint(tree);
+      var tree1 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) (+ y 20)) ) (plus 20)').tokens);
+      var tree2 = parser.parse(tokenizer.tokenize('(display ((lambda (y) (+ y 20)) 50))').tokens);
+      var ret1 = linter.lint(tree1);
+      var ret2 = linter.lint(tree2);
 
-      assert.equal(ret, true);
+      assert.equal(ret1, true);
+      assert.equal(ret2, true);
+    });
+
+    it('invalid programs and applications', function(){
+      var tree1 = parser.parse(tokenizer.tokenize('( plus (20 20 ) )').tokens);
+      var tree2 = parser.parse(tokenizer.tokenize('( 20 20 )').tokens);
+      var tree2 = parser.parse(tokenizer.tokenize('( [20 30 (20 y)] )').tokens);
+      var ret1 = linter.lint(tree1);
+      var ret2 = linter.lint(tree2);
+
+      assert.equal(ret1, false);
+      assert.equal(ret2, false);
     });
   });
 
@@ -252,6 +254,7 @@ describe('syntaxLinter', function(){
       
       assert.equal(ret, true);
     });
+
     it('invalid application', function(){
       var tree = parser.parse(tokenizer.tokenize('()').tokens);
       var ret = linter.lint(tree);

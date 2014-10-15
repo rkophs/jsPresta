@@ -17,7 +17,7 @@ var setVariable = function(word) {
 }
 
 var setKeyWord = function(word) {
-  return 0 === word.search(/^(if|lambda|define|quote)$/) ?
+  return 0 === word.search(/^(if|lambda|define|quote|list)$/) ?
     {lex: 'keyword', value: word, error:false} : null;
 }
 
@@ -25,6 +25,11 @@ var setOperator = function(word) {
   //Word must be <= >= * + - / > < =
   return 0 === word.search(/(^[\<\>]\=$|^[\*\/\+\-\>\<\=\|\&\!]$)/) ?
     {lex: 'operator', value: word, error:false} : null;
+}
+
+var setList = function(word) {
+  return 0 === word.search(/^[\[\]]$/) ?
+    {lex: 'lister' , value: word} : null;
 }
 
 var setBracket = function(word) {
@@ -44,12 +49,14 @@ var tokenize = function(input) {
   }
 
   tokens = input.replace(/\(/g, ' ( ') //Replace all instances of '(' with ' ( '
-                .replace(/\)/g, ' ) ') //Replace all instances of ')' with ' ) ' 
+                .replace(/\)/g, ' ) ') //Replace all instances of ')' with ' ) '
+                .replace(/\[/g, ' [ ') //Replace all instances of '[' with ' [ '
+                .replace(/\]/g, ' ] ') //Replace all instances of ']' with ' ] '  
                 .trim()                //Remove leading/trailing white space on ends of the string input
                 .split(/\s+/)          //Split on every chunk of whitespace  
                 .map(function(word) {
                   return setDigit(word) || setKeyWord(word) || setOperator(word) 
-                    || setVariable(word) || setBracket(word) || lexError(word);
+                    || setVariable(word) || setList(word) || setBracket(word) || lexError(word);
                 });
 
   return {

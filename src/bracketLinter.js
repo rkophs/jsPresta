@@ -5,20 +5,40 @@
 
 var bracketLinter = function(input) {
 
-  var parenthesis = input.replace(/[^\(\)]/g, '')
+  var mix = function(arr){
+    var count = 0;
+    var depth = [];
+    for (it in arr) {
+      var token = arr[it];
+      if(count < 0) {
+        return false;
+      }
+
+      if (token === '('){
+        depth[count++] = '(';
+      } else if (token === ')') {
+        if (depth[--count] !== '(') {
+          return false;
+        }
+      } else if (token === '[') {
+        depth[count++] = '[';
+      } else if (token === ']') {
+        if (depth[--count] !== '[') {
+          return false;
+        }
+      }
+    }
+    if (count != 0){
+      return false;
+    }
+    return true;
+  }
+
+  var parenthesis = input.replace(/[^\(\)\]\[]/g, '')
                          .split('');
 
-  var count = 0;
-  for ( it in parenthesis ) {
-    if (count < 0){
-      return {value:false, error:"Malformed parenthesis"};
-    }
-    count += (parenthesis[it] === ')' ? -1 : 1);
-  }
-  if (count != 0){
-    return {value:false, error:"Malformed parenthesis"};
-  }
-  return {value: true, error: null};
+  var valid = mix(parenthesis);
+  return valid;
 }
 
 exports.lint = bracketLinter;

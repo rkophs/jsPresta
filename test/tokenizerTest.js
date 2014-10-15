@@ -17,6 +17,15 @@ describe('tokenizer', function(){
       expect(ret.tokens[0].value).to.equal('(');
       expect(ret.tokens[1].value).to.equal(')');
     });
+    it('list op', function(){
+      var ret = tokenizer.tokenize("[]");
+      assert.equal(ret.tokens.length, 2);
+      assert.equal(ret.errors.length, 0);
+      expect(ret.tokens[0].value).to.equal('[');
+      expect(ret.tokens[0].lex).to.equal('lister');
+      expect(ret.tokens[1].value).to.equal(']');
+      expect(ret.tokens[1].lex).to.equal('lister');
+    });
     it('digit', function(){
       var ret = tokenizer.tokenize("345.345");
       assert.equal(ret.tokens.length, 1);
@@ -25,7 +34,7 @@ describe('tokenizer', function(){
       expect(ret.tokens[0].lex).to.equal('digit');
     });
     it('keyword', function(){
-      var words = ['if','lambda','define','quote'];
+      var words = ['if','lambda','define','list'];
       for (it in words){
         var ret = tokenizer.tokenize(words[it]);
         assert.equal(ret.tokens.length, 1);
