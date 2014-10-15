@@ -1,0 +1,10 @@
+{
+  "name":"jsPresta",
+  "version":"0.1.0",
+  "author":"Ryan Kophs",
+  "description":"Modified purely functional Scheme compiler to JavaScript.",
+  "devDependencies":{
+    "chai":"*",
+    "mocha":"*"
+  }
+}

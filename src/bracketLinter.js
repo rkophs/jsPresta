@@ -5,18 +5,40 @@
 
 var bracketLinter = function(input) {
 
-  if ( false ==  /^\((.|\n)*(\)|\s|\n)$/.test(input) ) { //Must being/end in bracket
-    var error = "Input must begin with opening parenthesis and end with closing parenthesis.";
-    return {value: false, error: error};
+  var mix = function(arr){
+    var count = 0;
+    var depth = [];
+    for (it in arr) {
+      var token = arr[it];
+      if(count < 0) {
+        return false;
+      }
+
+      if (token === '('){
+        depth[count++] = '(';
+      } else if (token === ')') {
+        if (depth[--count] !== '(') {
+          return false;
+        }
+      } else if (token === '[') {
+        depth[count++] = '[';
+      } else if (token === ']') {
+        if (depth[--count] !== '[') {
+          return false;
+        }
+      }
+    }
+    if (count != 0){
+      return false;
+    }
+    return true;
   }
 
-  var diff = (input.match( /\(/g ) || '').length - (input.match( /\)/g ) || '').length;
-  if(diff) {
-    var error = Math.abs(diff) + " too many " + (diff < 0 ? "closing" : "opening" ) + " parenthesis."
-    return {value: false, error: error};
-  }
+  var parenthesis = input.replace(/[^\(\)\]\[]/g, '')
+                         .split('');
 
-  return {value: true, error: null};
+  var valid = mix(parenthesis);
+  return valid;
 }
 
 exports.lint = bracketLinter;
