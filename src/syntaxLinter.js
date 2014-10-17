@@ -160,7 +160,8 @@ var isLambda = function(tree) {
  *                | <variable>
  *                | <list>
  *                | <lambda>
- *                | ( <pattern-match>+ )
+ *                | ( | <expression> <expression>  )
+ *                | ( | _ <expression>  )
  *                | ( if <expression> <expression> <expression> ) 
  *                | ( <operator> <expression>+ )
  *                | <application>
@@ -190,12 +191,30 @@ var isExpression = function(inputTree) {
                    }, true)
        ), "expression")
   };
+  var isPatternMatchExpression = function(tree){
+    return setSuccess(tree, (
+         (tree.value instanceof Array)
+      && (tree.value.length >= 3)
+      && (tree.value.length %3 == 0)
+      && tree.value.reduce(function(accum, elem){
+                      return {
+                        valid: (accum.valid && (
+                            (it == 0 && isSpecificKeyword(elem, "|"))
+                          || (it == 1 && (isSpecificKeyword(elem, "_") || isExpression(elem)))
+                          || (it == 2 && isExpression(elem))
+                        )),
+                        it: (++accum.it % 3)
+                      }
+                   }, {valid: true, it: 0}).valid
+    ), "expression")
+  }
 
   return setSuccess(inputTree, (
        isDigit(inputTree)
     || isVariable(inputTree)
     || isList(inputTree)
     || isLambda(inputTree)
+    || isPatternMatchExpression(inputTree)
     || isIfExpression(inputTree)
     || isOpExpression(inputTree)
     || isApplication(inputTree)

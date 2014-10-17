@@ -124,6 +124,7 @@ describe('syntaxLinter', function(){
       var tree16 = parser.parse(tokenizer.tokenize('( define plus (lambda () (num) (+ 10 20) ))').tokens); //pure means no need for this fn
       var tree17 = parser.parse(tokenizer.tokenize('( define plus (lambda (y)  ((+ y z)) ))').tokens);
       var tree18 = parser.parse(tokenizer.tokenize('( define plus (lambda (y) (num num) ((+ y z)) ))').tokens);
+      var tree19 = parser.parse(tokenizer.tokenize('( define plus (lambda (num num)(num num)(+ y z)) )').tokens);
 
       var ret1 = linter.lint(tree1);
       var ret2 = linter.lint(tree2);
@@ -143,7 +144,8 @@ describe('syntaxLinter', function(){
       var ret16 = linter.lint(tree16);
       var ret17 = linter.lint(tree17);
       var ret18 = linter.lint(tree18);
-      
+      var ret19 = linter.lint(tree19);
+
       assert.equal(ret1, false);
       assert.equal(ret2, false);
       assert.equal(ret3, false);
@@ -162,6 +164,7 @@ describe('syntaxLinter', function(){
       assert.equal(ret16, false);
       assert.equal(ret17, false);
       assert.equal(ret18, false);
+      assert.equal(ret19, false);
     });
 
     it('define to invalid lambda again', function(){
@@ -233,7 +236,7 @@ describe('syntaxLinter', function(){
     it('valid ops', function(){
       var tree1 = parser.parse(tokenizer.tokenize('(+ 1 2 3)').tokens);
       var tree2 = parser.parse(tokenizer.tokenize('(+ 1 )').tokens);
-      var tree3 = parser.parse(tokenizer.tokenize('(+ (- 10 (* 20 (/ 4 (> 3 (< 4 (>= (<= (= (! 2) 3) 4) 5) 6) 7) 8) 9) 10) 20)').tokens);
+      var tree3 = parser.parse(tokenizer.tokenize('(+ (- 10 (* 20 (/ 4 (> 3 (< 4 (>= (<= (== (|| 2 (! 2)) 3) 4) 5) 6) 7) 8) 9) 10) 20)').tokens);
       var ret1 = linter.lint(tree1);
       var ret2 = linter.lint(tree2);
       var ret3 = linter.lint(tree3);

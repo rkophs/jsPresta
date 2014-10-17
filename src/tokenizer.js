@@ -17,13 +17,13 @@ var setVariable = function(word) {
 }
 
 var setKeyWord = function(word) {
-  return 0 === word.search(/^(if|lambda|define|quote|list)$/) ?
+  return 0 === word.search(/^(if|lambda|define|quote|list|num|\||\_)$/) ?
     {lex: 'keyword', value: word, error:false} : null;
 }
 
 var setOperator = function(word) {
   //Word must be <= >= * + - / > < =
-  return 0 === word.search(/(^[\<\>]\=$|^[\*\/\+\-\>\<\=\|\&\!]$)/) ?
+  return 0 === word.search(/(^\&\&$|^\|\|$|^[\<\>\=]\=$|^[\*\/\+\-\>\<\!]$)/) ?
     {lex: 'operator', value: word, error:false} : null;
 }
 
