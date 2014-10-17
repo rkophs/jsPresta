@@ -83,21 +83,8 @@ var isApplication = function(tree) {
 };
 
 /*
- * <list-type> -> [ <type>* ]
- */
-var isListType = function (tree) {
-  return setSuccess(tree, (
-       (tree.lex === 'lister')
-    && (tree.elements instanceof Array)
-    && tree.elements.reduce(function(accum, elem){
-                      return isType(elem) && accum;
-                    }, true)
-  ), "type-list");
-}
-
-/*
  * <type> -> num
- *         | <list-type>
+ *         | ([]+ <type>)
  *         | (lambda ( <type>+ ) ( <type> ))
  */
 var isType = function (tree) {
@@ -119,8 +106,20 @@ var isType = function (tree) {
                              }, true)
       && (input.value[2].value instanceof Array)
       && (input.value[2].value.length == 1)
-      && isType(input.value[2].value[0]);
+      && isType(input.value[2].value[0])
     ), "type-lambda");
+  };
+  var isListType = function (input) {
+  return setSuccess(input, (
+         (input.lex === 'lister')
+      && (input.elements instanceof Array)
+      && input.elements.length >= 2
+      && input.elements.slice(-1)
+                       .reduce(function(accum, elem){
+                        return isType(elem) && accum;
+                      }, true)
+      && isType(input.elements[input.elements.length-1])
+    ), "type-list");
   }
   return setSuccess(tree, (
        isNumType(tree)
@@ -130,37 +129,24 @@ var isType = function (tree) {
 }
 
 /*
- * <formal> -> <variables> <type>
- */
-var isFormal = function(tree) {
-  return setSuccess(tree, (
-       (tree.value instanceof Array)
-    && (tree.value.length >= 1)
-    && tree.value.reduce(function(accum, elem){
-                    return isVariable(elem) && accum;
-                 },true)
-  ), "formal")
-};
-
-/*
- * <lambda> -> ( lambda ( <formal>+ ) (<type>) <body> )
+ * <lambda> -> ( lambda ( <variable>+ ) ( <type>+ <type> ) <body> )
  */
 var isLambda = function(tree) {
   return setSuccess(tree, (
        (tree.value instanceof Array)
     && tree.value.length >= 4
-    && tree.value[0].value == 'lambda'
     && isSpecificKeyword(tree.value[0], 'lambda')
     && (tree.value[1].value instanceof Array)
     && (tree.value[1].value.length >= 1)
     && tree.value[1].value.reduce(function(accum, elem){
-                            return isFormal(elem) && accum;
+                            return isVariable(elem) && accum;
                           },true)
-    && isFormal(tree.value[1])
     && (tree.value[2].value instanceof Array)
-    && (tree.value[2].value.length == 1)
-    && isType(tree.value[2].value[0])
-    && isBody(tree.value.slice(2))
+    && (tree.value[2].value.length >= 2)
+    && tree.value[2].value.reduce(function(accum, elem){
+                            return isType(elem) && accum;
+                          },true)
+    && isBody(tree.value.slice(3))
   ), "lambda", true);
 }
 
