@@ -6,7 +6,7 @@
 
 var setDigit = function(word) {
   return ((!isNaN(parseFloat(word))) && (0 === word.search(/^[0-9\.]+$/))) ?
-    {lex: 'digit', value: parseFloat(word)} : null;
+    {lex: 'digit', value: parseFloat(word), error:false} : null;
 }
 
 var setVariable = function(word) {
@@ -17,19 +17,29 @@ var setVariable = function(word) {
 }
 
 var setKeyWord = function(word) {
-  return 0 === word.search(/^(if|lambda|define|quote|list|num|\||\_)$/) ?
+  return 0 === word.search(/^(if|lambda|quote|list|num|\||\_)$/) ?
     {lex: 'keyword', value: word, error:false} : null;
 }
 
-var setOperator = function(word) {
-  //Word must be <= >= * + - / > < =
-  return 0 === word.search(/(^\&\&$|^\|\|$|^[\<\>\=]\=$|^[\*\/\+\-\>\<\!]$)/) ?
-    {lex: 'operator', value: word, error:false} : null;
+var setUnaryOperand = function(word){
+  return 0 === word.search(/^\!$/) ?
+    {lex: 'unary-operand', value: word, error:false} : null;
+}
+
+var setBinaryOperand = function(word) {
+  //Word must be <= >= * + - / > < ==  != ||
+  return 0 === word.search(/(^\&\&$|^\|\|$|^[\<\>\=]\=$|^[\*\/\+\-\>\<]$)/) ?
+    {lex: 'binary-operand', value: word, error:false} : null;
+}
+
+var setSyntacticSuguar = function(word){
+  return 0 === word.search(/(^\-\>$|^\:\:$)/) ?
+    {lex: 'sugar', value: word, error:false} : null;
 }
 
 var setList = function(word) {
   return 0 === word.search(/^[\[\]]$/) ?
-    {lex: 'lister' , value: word} : null;
+    {lex: 'lister', value: word} : null;
 }
 
 var setBracket = function(word) {
@@ -52,11 +62,13 @@ var tokenize = function(input) {
                 .replace(/\)/g, ' ) ') //Replace all instances of ')' with ' ) '
                 .replace(/\[/g, ' [ ') //Replace all instances of '[' with ' [ '
                 .replace(/\]/g, ' ] ') //Replace all instances of ']' with ' ] '  
+                .replace(/\-\>/g, ' -> ') //Replace all instances of '->' with ' -> '  
                 .trim()                //Remove leading/trailing white space on ends of the string input
                 .split(/\s+/)          //Split on every chunk of whitespace  
                 .map(function(word) {
-                  return setDigit(word) || setKeyWord(word) || setOperator(word) 
-                    || setVariable(word) || setList(word) || setBracket(word) || lexError(word);
+                  return setDigit(word) || setKeyWord(word) || setUnaryOperand(word) 
+                    || setBinaryOperand(word) || setSyntacticSuguar(word) || setVariable(word) 
+                    || setList(word) || setBracket(word) || lexError(word);
                 });
 
   return {
