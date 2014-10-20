@@ -34,7 +34,7 @@ describe('tokenizer', function(){
       expect(ret.tokens[0].lex).to.equal('digit');
     });
     it('keyword', function(){
-      var words = ['if','lambda','define','list'];
+      var words = ['if','lambda','list', '|', '_', 'num'];
       for (it in words){
         var ret = tokenizer.tokenize(words[it]);
         assert.equal(ret.tokens.length, 1);
@@ -43,14 +43,34 @@ describe('tokenizer', function(){
         expect(ret.tokens[0].lex).to.equal('keyword');
       }
     });
-    it('operator', function(){
-      var words = ['+','-','/','*','>','<','>=','<=','=','&', '|', '!'];
+    it('binary operator', function(){
+      var words = ['+','-','/','*','>','<','>=','<=','==','&&', '||'];
       for (it in words){
         var ret = tokenizer.tokenize(words[it]);
         assert.equal(ret.tokens.length, 1);
         assert.equal(ret.errors.length, 0);
         expect(ret.tokens[0].value).to.equal(words[it]);
-        expect(ret.tokens[0].lex).to.equal('operator');
+        expect(ret.tokens[0].lex).to.equal('binary-operand');
+      }
+    });
+    it('unary operator', function(){
+      var words = ['!'];
+      for (it in words){
+        var ret = tokenizer.tokenize(words[it]);
+        assert.equal(ret.tokens.length, 1);
+        assert.equal(ret.errors.length, 0);
+        expect(ret.tokens[0].value).to.equal(words[it]);
+        expect(ret.tokens[0].lex).to.equal('unary-operand');
+      }
+    });
+    it('syntactic sugar', function(){
+      var words = ['::', '->'];
+      for (it in words){
+        var ret = tokenizer.tokenize(words[it]);
+        assert.equal(ret.tokens.length, 1);
+        assert.equal(ret.errors.length, 0);
+        expect(ret.tokens[0].value).to.equal(words[it]);
+        expect(ret.tokens[0].lex).to.equal('sugar');
       }
     });
     it('variable', function(){
@@ -73,7 +93,7 @@ describe('tokenizer', function(){
       expect(ret.errors[0]).to.equal("Cannot have empty string.");
     });
     it('invalid words', function(){
-      var words = ['341ff', '23ff2', '23,12', ',', '!&', '&&', '||', '23!', '23&', '&23', '&ad', 'sdf&', '==', '545=', 'adf11=asdf23'];
+      var words = ['341ff', '23ff2', '23,12', ',', '!&', '23!', '23&', '&23', '&ad', 'sdf&', '=', '545=', 'adf11=asdf23', '-:::>', '-7>'];
       for (it in words){
         var ret = tokenizer.tokenize(words[it]);
         assert.equal(ret.errors.length, 1);
@@ -85,18 +105,23 @@ describe('tokenizer', function(){
 
   describe("#tokenize() multiple", function(){
     it('valid', function(){
-      var ret = tokenizer.tokenize('(+(= 3 4   \n\n)5 6)  \n ');
+      var ret = tokenizer.tokenize('(+(== 3 4   \n\n)5 6)  \n ');
       assert.equal(ret.tokens.length, 10);
       assert.equal(ret.errors.length, 0);
     });
+    it('valid type', function(){
+      var ret = tokenizer.tokenize('(num->num->num)  \n ');
+      assert.equal(ret.tokens.length, 7);
+      assert.equal(ret.errors.length, 0);
+    });
     it('invalid mix', function(){
-      var ret = tokenizer.tokenize('(= 3f 4   \n\n)  \n ');
+      var ret = tokenizer.tokenize('(== 3f 4   \n\n)  \n ');
       assert.equal(ret.tokens, null);
       assert.equal(ret.errors.length, 1);
       expect(ret.errors[0]).to.equal("Illegal character or word: 3f");
     });
     it('multiple invalid mix', function(){
-      var ret = tokenizer.tokenize('(= 3f 4   \n\n)6t  \n ');
+      var ret = tokenizer.tokenize('(== 3f 4   \n\n)6t  \n ');
       assert.equal(ret.tokens, null);
       assert.equal(ret.errors.length, 2);
       expect(ret.errors[0]).to.equal("Illegal character or word: 3f");

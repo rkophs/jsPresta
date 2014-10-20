@@ -8,6 +8,7 @@
  *  in the formal clauses or within the the variable definition clauses
  *
  * Check that the program can be invoked (first element is a function and subsequent are valid params)
+ * in matcher... check that _ only happens once and is last
  */
 
 var newScope = function(){
