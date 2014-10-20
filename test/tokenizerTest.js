@@ -19,6 +19,7 @@ describe('tokenizer', function(){
     });
     it('list op', function(){
       var ret = tokenizer.tokenize("[]");
+
       assert.equal(ret.tokens.length, 2);
       assert.equal(ret.errors.length, 0);
       expect(ret.tokens[0].value).to.equal('[');
