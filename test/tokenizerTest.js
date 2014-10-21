@@ -35,7 +35,7 @@ describe('tokenizer', function(){
       expect(ret.tokens[0].lex).to.equal('digit');
     });
     it('keyword', function(){
-      var words = ['if','lambda','list', '|', '_', 'num'];
+      var words = ['if','lambda','list', '|', '_', 'num', '::', '->'];
       for (it in words){
         var ret = tokenizer.tokenize(words[it]);
         assert.equal(ret.tokens.length, 1);
@@ -62,16 +62,6 @@ describe('tokenizer', function(){
         assert.equal(ret.errors.length, 0);
         expect(ret.tokens[0].value).to.equal(words[it]);
         expect(ret.tokens[0].lex).to.equal('unary-operand');
-      }
-    });
-    it('syntactic sugar', function(){
-      var words = ['::', '->'];
-      for (it in words){
-        var ret = tokenizer.tokenize(words[it]);
-        assert.equal(ret.tokens.length, 1);
-        assert.equal(ret.errors.length, 0);
-        expect(ret.tokens[0].value).to.equal(words[it]);
-        expect(ret.tokens[0].lex).to.equal('sugar');
       }
     });
     it('variable', function(){

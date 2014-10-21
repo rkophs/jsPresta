@@ -11,12 +11,15 @@ describe('syntaxLinter', function(){
       var tree = parser.parse(tokenizer.tokenize('( f [] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].value[1].syntax, "list");
     });
 
     it('full list valid', function(){
       var tree = parser.parse(tokenizer.tokenize('( f [ 10 10 ] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].value[1].syntax, "list");
+      assert.equal(tree.value[0].value[1].elements[0].syntax, "digit");
     });
 
     it('single list valid', function(){
@@ -29,19 +32,27 @@ describe('syntaxLinter', function(){
       var tree = parser.parse(tokenizer.tokenize('(f [ 10 f ((num -> num) (y) -> ( 10 + y )) ] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
-
+      assert.equal(tree.value[0].value[1].elements[0].syntax, "digit");
+      assert.equal(tree.value[0].value[1].elements[1].syntax, "variable");
+      assert.equal(tree.value[0].value[1].elements[2].syntax, "lambda");
     });
 
     it('nested lists valid ', function(){
       var tree = parser.parse(tokenizer.tokenize('( f [ x 30 [ y 50 ] ] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].value[1].elements[2].syntax, "list");
+      assert.equal(tree.value[0].value[1].elements[2].elements[0].syntax, "variable");
+      assert.equal(tree.value[0].value[1].elements[2].elements[1].syntax, "digit");
     });
 
     it('nested lists valid with valid application (lists, digits and vars)', function(){
       var tree = parser.parse(tokenizer.tokenize('( f [ x 30 ( b 50 ) ])').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].value[1].elements[2].syntax, "application");
+      assert.equal(tree.value[0].value[1].elements[2].value[0].syntax, "variable");
+      assert.equal(tree.value[0].value[1].elements[2].value[1].syntax, "digit");
     });
 
     it('full list invalid', function(){
@@ -50,16 +61,14 @@ describe('syntaxLinter', function(){
       assert.equal(ret, false);
     });
 
-    it('nested list valid', function(){
-      var tree = parser.parse(tokenizer.tokenize('( f [ 20 30 [ 10 30 ]] )').tokens);
-      var ret = linter.lint(tree);
-      assert.equal(ret, true);
-    });
-
     it('list with op valid', function(){
       var tree = parser.parse(tokenizer.tokenize('( f [ ( 20 + 30 ) ])').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].value[1].elements[0].syntax, "binary-operation");
+      assert.equal(tree.value[0].value[1].elements[0].value[0].syntax, "digit");
+      assert.equal(tree.value[0].value[1].elements[0].value[1].syntax, "binary-operand");
+      assert.equal(tree.value[0].value[1].elements[0].value[2].syntax, "digit");
     })
 
     it('list invalid op', function(){
@@ -75,24 +84,43 @@ describe('syntaxLinter', function(){
       var tree = parser.parse(tokenizer.tokenize('( x :: y )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].syntax, 'variable-definition');
+      assert.equal(tree.value[0].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].syntax, 'variable');
     });
 
     it('define to valid digit', function(){
       var tree = parser.parse(tokenizer.tokenize('( x :: 10 )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].syntax, 'variable-definition');
+      assert.equal(tree.value[0].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].syntax, 'digit');
     });
 
     it('define to valid list', function(){
       var tree = parser.parse(tokenizer.tokenize('( x :: [y z] )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].syntax, 'list');
+      assert.equal(tree.value[0].value[2].elements[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[2].elements[1].syntax, 'variable');
     });
 
     it('define to valid operation', function(){
       var tree = parser.parse(tokenizer.tokenize('( x :: (10 + 12) )').tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.value[0].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].syntax, 'binary-operation');
+      assert.equal(tree.value[0].value[2].value[0].syntax, 'digit');
+      assert.equal(tree.value[0].value[2].value[1].syntax, 'binary-operand');
+      assert.equal(tree.value[0].value[2].value[0].syntax, 'digit');
     });
 
     it('define to valid lambdas', function(){
@@ -107,7 +135,43 @@ describe('syntaxLinter', function(){
         var tree = parser.parse(tokenizer.tokenize(lambdas[it]).tokens);
         var ret = linter.lint(tree)
         assert.equal(ret, true);
+        assert.equal(tree.value[0].syntax, 'variable-definition');
+        assert.equal(tree.value[0].value[0].syntax, 'variable');
+        assert.equal(tree.value[0].value[2].syntax, 'lambda');
+        assert.equal(tree.value[0].value[2].value[0].syntax, 'type-expression');
+        assert.equal(tree.value[0].value[2].value[1].syntax, 'formals');
       }
+    });
+
+    it('valid type syntax check', function(){
+      var str = '( plus :: ( (num -> ( num -> [[[(num -> num)]]] )) (y z) (x :: 10) -> (! y))  )';
+      var tree = parser.parse(tokenizer.tokenize(str).tokens);
+      var ret = linter.lint(tree);
+      assert.equal(ret, true);
+      assert.equal(tree.value[0].value[2].syntax, 'lambda');
+      assert.equal(tree.value[0].value[2].value[0].syntax, 'type-expression');
+      assert.equal(tree.value[0].value[2].value[0].value[0].syntax, 'type-num');
+      assert.equal(tree.value[0].value[2].value[0].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[0].value[2].syntax, 'type-expression');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[0].syntax, 'type-num');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[2].syntax, 'type-list');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[2].elements[0].syntax, 'type-list');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[2].elements[0].elements[0].syntax, 'type-list');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[2].elements[0].elements[0].elements[0].syntax, 'type-expression');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[2].elements[0].elements[0].elements[0].value[0].syntax, 'type-num');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[2].elements[0].elements[0].elements[0].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[0].value[2].value[2].elements[0].elements[0].elements[0].value[2].syntax, 'type-num');
+      assert.equal(tree.value[0].value[2].value[1].syntax, 'formals');
+      assert.equal(tree.value[0].value[2].value[1].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[2].value[1].value[1].syntax, 'variable');
+      assert.equal(tree.value[0].value[2].value[2].syntax, 'variable-definition');
+      assert.equal(tree.value[0].value[2].value[2].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[2].value[2].value[2].syntax, 'digit');
+      assert.equal(tree.value[0].value[2].value[3].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[4].syntax, 'unary-operation');
+      assert.equal(tree.value[0].value[2].value[4].value[0].syntax, 'unary-operand');
+      assert.equal(tree.value[0].value[2].value[4].value[1].syntax, 'variable');
     });
 
     it('valid types', function(){
@@ -148,6 +212,9 @@ describe('syntaxLinter', function(){
         '( plus :: ( ( int -> num ) (y) -> (y + 20))  )',
         '( plus :: ( ( num -> int ) (y) -> (y + 20))  )',
         '( plus :: ( ( num -> [int] ) (y) -> (y + 20))  )',
+        '( plus :: ( num (y) -> (y + 20))  )',
+        '( plus :: ( [num] (y) -> (y + 20))  )',
+        '( plus :: ( [num -> num] (y) -> (y + 20))  )',
       ];
       for(it in lambdas){
         var tree = parser.parse(tokenizer.tokenize(lambdas[it]).tokens);
@@ -158,6 +225,7 @@ describe('syntaxLinter', function(){
 
     it('define to invalid lambdas', function(){
       var lambdas = [
+        '( plus :: ( (num -> ( num -> num )) [y] -> (y + 20))  )',
         '( plus :: ((y) -> (y + 20))  )',
         '( plus :: ( ( num -> num ) -> (y + 20))  )',
         '( plus :: ( ( num -> num ) () -> (10 + 20))  )',
@@ -199,6 +267,39 @@ describe('syntaxLinter', function(){
     });
 
   });
+
+  describe("#lint() pattern matches syntax check", function () {
+    it(('valid pattern syntax 1'),function(){
+      var tree = parser.parse(tokenizer.tokenize('( x :: ( | ( x < y ) 2 | _ 3 ) )').tokens);
+      var ret = linter.lint(tree);
+      assert.equal(ret, true);
+      assert.equal(tree.value[0].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].syntax, 'pattern-match');
+      assert.equal(tree.value[0].value[2].value[0].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[1].syntax, 'binary-operation');
+      assert.equal(tree.value[0].value[2].value[2].syntax, 'digit');
+      assert.equal(tree.value[0].value[2].value[3].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[4].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[5].syntax, 'digit');
+    });
+
+    it(('valid pattern syntax 2'),function(){
+      var tree = parser.parse(tokenizer.tokenize('( x :: ( y | 3 2 | _ 3 ) )').tokens);
+      var ret = linter.lint(tree);
+      assert.equal(ret, true);
+      assert.equal(tree.value[0].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].syntax, 'pattern-match');
+      assert.equal(tree.value[0].value[2].value[0].syntax, 'variable');
+      assert.equal(tree.value[0].value[2].value[1].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[2].syntax, 'digit');
+      assert.equal(tree.value[0].value[2].value[3].syntax, 'digit');
+      assert.equal(tree.value[0].value[2].value[4].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[5].syntax, 'keyword');
+      assert.equal(tree.value[0].value[2].value[6].syntax, 'digit');
+    });
+  })
 
   describe("#lint() pattern matches", function(){
     it('valid patterns', function(){
@@ -305,5 +406,13 @@ describe('syntaxLinter', function(){
         assert.equal(ret, false);
       }
     });
+  });
+
+
+  describe("#lint() valid program and form", function(){
+    it('define to valid program and form', function(){
+
+    });
+
   });
 })
