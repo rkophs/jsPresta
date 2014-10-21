@@ -414,10 +414,15 @@ describe('syntaxLinter', function(){
       var program = '(add :: (((num -> num) -> num) (y z) -> (y + z) ))' 
       + ' (decr :: ( add -1 ) )'
       + ' (factorial :: ( (num -> num) (x) -> (x | 1 0 | 0 0 | _ (x * (factorial (decr x)))) )) '
-      + '(plus 20)';
+      + '(factorial 20)';
       var tree = parser.parse(tokenizer.tokenize(program).tokens);
       var ret = linter.lint(tree);
       assert.equal(ret, true);
+      assert.equal(tree.syntax, 'program');
+      assert.equal(tree.value[0].syntax, 'variable-definition');
+      assert.equal(tree.value[1].syntax, 'variable-definition');
+      assert.equal(tree.value[2].syntax, 'variable-definition');
+      assert.equal(tree.value[3].syntax, 'application');
     });
 
   });
