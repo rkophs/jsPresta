@@ -85,17 +85,58 @@ var isApplication = function(tree) {
   ), "formals")
 };
 
+/*
+ * <type> -> num 
+ *         | <type-expression>
+ *         | [<type>]
+ */
+isType = function(tree) {
+  var isNumType = function(input){
+    return setSuccess(input, (
+         (false == input.value instanceof Array)
+      && (input.value === 'num')
+    ), "type-num");
+  };
+
+  var isListType = function (input) {
+  return setSuccess(input, (
+         (input.lex === 'lister')
+      && (input.elements instanceof Array)
+      && input.elements.length == 1
+      && isType(input.elements[0])
+    ), "type-list");
+  }
+  return setSuccess(tree, (
+       isNumType(tree)
+    || isListType(tree)
+    || isTypeExpression(tree)
+  ), "type", true)
+}
+
+/*
+ * <type-expression> -> (<type> -> <type>)
+ */
+var isTypeExpression = function(tree){
+  return setSuccess(tree, (
+       (tree.value instanceof Array)
+    && (tree.value.length == 3)
+    && isType(tree.value[0])
+    && isType(tree.value[2])
+    && isSpecificKeyword(tree.value[1], '->')
+  ), "type-expression")
+}
+
  /*
-  * <lambda> -> (<type> <formals> <variable-definition>* -> <expression>)
+  * <lambda> -> (<type-expression> <formals> <variable-definition>* -> <expression>)
   */
 var isLambda = function(tree) {
   return setSuccess(tree, (    
        (tree.value instanceof Array)
     && (tree.value.length >= 4)
     && isExpression(tree.value[tree.value.length - 1])
-    && isType(tree.value[0])
+    && isTypeExpression(tree.value[0])
     && isFormals(tree.value[1])
-    && (tree.value[tree.value.length - 2].value === '->')
+    && isSpecificKeyword(tree.value[tree.value.length - 2], '->')
     && (
             (
                  (tree.value.length > 4)
@@ -124,8 +165,8 @@ var isPatternMatch = function(tree){
       && arr.reduce(function(accum, elem){
                       return {
                         valid: (accum.valid && (
-                             (accum.it == 0 && elem.value === '|')
-                          || (accum.it == 1 && ( elem.value === '_' || isExpression(elem)))
+                             (accum.it == 0 && isSpecificKeyword(elem, '|'))
+                          || (accum.it == 1 && ( isSpecificKeyword(elem, '_') || isExpression(elem)))
                           || (accum.it == 2 && isExpression(elem))
                         )),
                         it: (++accum.it % 3)
@@ -214,54 +255,13 @@ var isVariable = function(atom) {
 };
 
 /*
- * <type> -> num 
- *         | <type-expression>
- *         | [<type>]
- */
-isType = function(tree) {
-  var isNumType = function(input){
-    return setSuccess(input, (
-         (false == input.value instanceof Array)
-      && (input.value === 'num')
-    ), "type-num");
-  };
-
-  var isListType = function (input) {
-  return setSuccess(input, (
-         (input.lex === 'lister')
-      && (input.elements instanceof Array)
-      && input.elements.length == 1
-      && isType(input.elements[0])
-    ), "type-list");
-  }
-  return setSuccess(tree, (
-       isNumType(tree)
-    || isListType(tree)
-    || isTypeExpression(tree)
-  ), "type", true)
-}
-
-/*
- * <type-expression> -> (<type> -> <type>)
- */
-var isTypeExpression = function(tree){
-  return setSuccess(tree, (
-       (tree.value instanceof Array)
-    && (tree.value.length == 3)
-    && isType(tree.value[0])
-    && isType(tree.value[2])
-    && (tree.value[1].value == '->')
-  ), "type-expression")
-}
-
-/*
  * <variable-definition> -> ( <variable> :: <expression> )
  */
 var isVariableDefinition = function(tree) {
   return setSuccess(tree, (    
        (tree.value instanceof Array)
     && (tree.value.length == 3)
-    && (tree.value[1].value == "::")
+    && isSpecificKeyword(tree.value[1], '::')
     && isVariable(tree.value[0])
     && isExpression(tree.value[tree.value.length - 1])
   ), "variable-definition")

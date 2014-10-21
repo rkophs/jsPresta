@@ -27,6 +27,20 @@ describe('tokenizer', function(){
       expect(ret.tokens[1].value).to.equal(']');
       expect(ret.tokens[1].lex).to.equal('lister');
     });
+    it('valid int', function(){
+      var ret = tokenizer.tokenize("345");
+      assert.equal(ret.tokens.length, 1);
+      assert.equal(ret.errors.length, 0);
+      expect(ret.tokens[0].value).to.equal(345);
+      expect(ret.tokens[0].lex).to.equal('digit');
+    });
+    it('valid negative int', function(){
+      var ret = tokenizer.tokenize("-345");
+      assert.equal(ret.tokens.length, 1);
+      assert.equal(ret.errors.length, 0);
+      expect(ret.tokens[0].value).to.equal(-345);
+      expect(ret.tokens[0].lex).to.equal('digit');
+    });
     it('digit', function(){
       var ret = tokenizer.tokenize("345.345");
       assert.equal(ret.tokens.length, 1);
@@ -34,8 +48,29 @@ describe('tokenizer', function(){
       expect(ret.tokens[0].value).to.equal(345.345);
       expect(ret.tokens[0].lex).to.equal('digit');
     });
+    it('negative digit', function(){
+      var ret = tokenizer.tokenize("-345.345");
+      assert.equal(ret.tokens.length, 1);
+      assert.equal(ret.errors.length, 0);
+      expect(ret.tokens[0].value).to.equal(-345.345);
+      expect(ret.tokens[0].lex).to.equal('digit');
+    });
+    it('negative digit no leading', function(){
+      var ret = tokenizer.tokenize("-.345");
+      assert.equal(ret.tokens.length, 1);
+      assert.equal(ret.errors.length, 0);
+      expect(ret.tokens[0].value).to.equal(-0.345);
+      expect(ret.tokens[0].lex).to.equal('digit');
+    });
+    it('digit no leading', function(){
+      var ret = tokenizer.tokenize(".345");
+      assert.equal(ret.tokens.length, 1);
+      assert.equal(ret.errors.length, 0);
+      expect(ret.tokens[0].value).to.equal(0.345);
+      expect(ret.tokens[0].lex).to.equal('digit');
+    });
     it('keyword', function(){
-      var words = ['if','lambda','list', '|', '_', 'num'];
+      var words = ['if','lambda','list', '|', '_', 'num', '::', '->'];
       for (it in words){
         var ret = tokenizer.tokenize(words[it]);
         assert.equal(ret.tokens.length, 1);
@@ -64,16 +99,6 @@ describe('tokenizer', function(){
         expect(ret.tokens[0].lex).to.equal('unary-operand');
       }
     });
-    it('syntactic sugar', function(){
-      var words = ['::', '->'];
-      for (it in words){
-        var ret = tokenizer.tokenize(words[it]);
-        assert.equal(ret.tokens.length, 1);
-        assert.equal(ret.errors.length, 0);
-        expect(ret.tokens[0].value).to.equal(words[it]);
-        expect(ret.tokens[0].lex).to.equal('sugar');
-      }
-    });
     it('variable', function(){
       var words = ['test','test2','te2sdf','te223','t'];
       for (it in words){
@@ -94,7 +119,11 @@ describe('tokenizer', function(){
       expect(ret.errors[0]).to.equal("Cannot have empty string.");
     });
     it('invalid words', function(){
-      var words = ['341ff', '23ff2', '23,12', ',', '!&', '23!', '23&', '&23', '&ad', 'sdf&', '=', '545=', 'adf11=asdf23', '-:::>', '-7>'];
+      var words = [
+        '341ff', '23ff2', '23,12', ',', '!&', '23!', '23&', 
+        '&23', '&ad', 'sdf&', '=', '545=', 'adf11=asdf23', 
+        '-:::>', '-7>', '-ff23.234', '-.ff23', '-.', '-.ff',
+        'ff-.23', 'ff-0.23'];
       for (it in words){
         var ret = tokenizer.tokenize(words[it]);
         assert.equal(ret.errors.length, 1);
