@@ -5,7 +5,7 @@
  */
 
 var setDigit = function(word) {
-  return ((!isNaN(parseFloat(word))) && (0 === word.search(/^[0-9\.]+$/))) ?
+  return ((!isNaN(parseFloat(word))) && (0 === word.search(/^\-?(\d+\.?\d*|\.\d+)$/))) ?
     {lex: 'digit', value: parseFloat(word), error:false} : null;
 }
 

@@ -411,8 +411,18 @@ describe('syntaxLinter', function(){
 
   describe("#lint() valid program and form", function(){
     it('define to valid program and form', function(){
-
+      var program = '(add :: (((num -> num) -> num) (y z) -> (y + z) ))' 
+      + ' (decr :: ( add -1 ) )'
+      + ' (factorial :: ( (num -> num) (x) -> (x | 1 0 | 0 0 | _ (x * (factorial (decr x)))) )) '
+      + '(plus 20)';
+      var tree = parser.parse(tokenizer.tokenize(program).tokens);
+      var ret = linter.lint(tree);
+      assert.equal(ret, true);
     });
 
   });
-})
+});
+
+
+
+
